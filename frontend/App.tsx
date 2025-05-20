@@ -78,6 +78,7 @@ const App: React.FC = () => {
       // Test backend connection first
       try {
         console.log('Testing backend connection...');
+        console.log('API Base URL:', API_BASE);
         const testResponse = await axios.get(API_BASE);
         console.log('Backend connection test:', testResponse.data);
       } catch (testError: any) {
@@ -85,21 +86,21 @@ const App: React.FC = () => {
         throw new Error('Cannot connect to backend server. Please ensure the backend is running at ' + API_BASE);
       }
 
-      const modForm = new FormData();
-      modForm.append('file', file);
-      console.log('Sending moderation request...');
-      const moderation = await axios.post(`${API_BASE}/HiveModerationRoutes`, modForm, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        withCredentials: true,
-        timeout: 10000 // 10 second timeout
-      });
-      console.log('Moderation response:', moderation.data);
+      // const modForm = new FormData();
+      // modForm.append('file', file);
+      // console.log('Sending moderation request...');
+      // const moderation = await axios.post(`${API_BASE}/moderate-score`, modForm, {
+      //   headers: { 'Content-Type': 'multipart/form-data' },
+      //   withCredentials: true,
+      //   timeout: 10000 // 10 second timeout
+      // });
+      // console.log('Moderation response:', moderation.data);
       
-      if (!moderation.data.isAllowed) {
-        alert('❌ File rejected by moderation.');
-        setIsUploading(false);
-        return;
-      }
+      // if (!moderation.data.isAllowed) {
+      //   alert('❌ File rejected by moderation.');
+      //   setIsUploading(false);
+      //   return;
+      // }
   
       let fileCid = '';
       let dnaCid = '';
@@ -108,12 +109,12 @@ const App: React.FC = () => {
       console.log('Uploading to IPFS...');
       const fileForm = new FormData();
       fileForm.append('file', file);
-      const fileUpload = await axios.post(`${API_BASE}/IPFSindexRoutes`, fileForm, {
+      const fileUpload = await axios.post(`${API_BASE}/digest-ipfs`, fileForm, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 30000 // 30 second timeout for file upload
       });
       console.log('IPFS upload response:', fileUpload.data);
-      fileCid = fileUpload.data.cid;
+      fileCid = fileUpload.data.digest;
   
       // Optional: DNA encoding and upload to IPFS
       if (uploadMethod === 'dna') {
@@ -125,7 +126,7 @@ const App: React.FC = () => {
         dnaForm.append('redundancy', redundancy.toString());
         dnaForm.append('errorCorrection', errorCorrection ? 'true' : 'false');
   
-        const response = await axios.post(`${API_BASE}/dnaencodeRoutes`, dnaForm);
+        const response = await axios.post(`${API_BASE}/encode-dna`, dnaForm);
         const data = response.data;
   
         if (!data.encoded) {
@@ -140,7 +141,7 @@ const App: React.FC = () => {
         const dnaFile = new File([dnaBlob], `${file.name}.dna.txt`, { type: 'text/plain' });
         const dnaUploadForm = new FormData();
         dnaUploadForm.append('file', dnaFile);
-        const dnaUpload = await axios.post(`${API_BASE}/IPFSindexRoutes`, dnaUploadForm, {
+        const dnaUpload = await axios.post(`${API_BASE}/digest-ipfs`, dnaUploadForm, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
         dnaCid = dnaUpload.data.cid;
@@ -149,12 +150,16 @@ const App: React.FC = () => {
       }
   
       // Index both CIDs
-      await axios.post(`${API_BASE}/IPFSindexRoutes`, {
+      console.log('Indexing CIDs...');
+      console.log('File CID:', fileCid);
+      console.log(file.name);
+      await axios.post(`${API_BASE}/digest-ipfs`, {
         cid: fileCid,
         metadata: { title: file.name, creator: 'AppUser', type: 'original', timestamp: Date.now() }
       });
+      console.log('File CID indexed:', fileCid);
       if (uploadMethod === 'dna') {
-        await axios.post(`${API_BASE}/IPFSindexRoutes`, {
+        await axios.post(`${API_BASE}/digest-ipfs`, {
           cid: dnaCid,
           metadata: { title: `${file.name}.dna`, creator: 'AppUser', type: 'encoded', timestamp: Date.now() }
         });

@@ -1,11 +1,18 @@
 import { create } from 'ipfs-http-client';
+import { fetch } from 'undici';
+import type { Options } from 'ipfs-http-client';
 import { Readable } from 'stream';
 import crypto from 'crypto';
 import { MongoClient } from 'mongodb';
-import { moderate } from './HiveModeration';
 
-const ipfs = create({ url: process.env.IPFS_API_URL || 'http://localhost:5001' });
+interface ExtendedOptions extends Options {
+  fetch?: typeof fetch;
+}
 
+const ipfs = create({
+  url: process.env.IPFS_API_URL || 'http://localhost:5001',
+  fetch: (url, options) => fetch(url, { ...options, duplex: 'half' })
+} as ExtendedOptions);
 const mongoClient = new MongoClient(process.env.MONGO_URI || 'mongodb://localhost:27017');
 const dbName = 'metadata';
 const collectionName = 'files';
@@ -28,13 +35,15 @@ export async function storeModeratedFile(
   const collection = db.collection(collectionName);
 
   // 2. Upload file to IPFS
+  console.log('Uploading to IPFS...');
   const fileStream = Readable.from(buffer);
   const fileSize = buffer.length;
   const result = await ipfs.add({ path: fileName, content: fileStream });
   const cid = result.cid.toString();
 
   // 3. Moderate the file
-  const { class: detectedClass, score } = await moderate(fileName); // Make sure `moderate()` can work with this
+  // console.log('Moderating file...');
+  // const { class: detectedClass, score } = await moderate(fileName); // Make sure `moderate()` can work with this
 
   // 4. Create metadata
   const metadata = {
@@ -43,8 +52,8 @@ export async function storeModeratedFile(
     fileType,
     fileSize,
     uploadTimestamp: new Date(),
-    class: detectedClass,
-    score,
+    // class: detectedClass,
+    // score,
   };
 
   // 5. Generate SHA256 digest
@@ -53,7 +62,7 @@ export async function storeModeratedFile(
     fileName,
     fileType,
     fileSize,
-    score,
+    // score,
   });
 
   const digest = crypto.createHash('sha256').update(raw).digest('hex');

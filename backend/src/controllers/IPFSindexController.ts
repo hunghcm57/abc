@@ -8,17 +8,24 @@ export const storeModeratedFileHandler = async (
 ): Promise<void> => {
   try {
     if (!req.file || !req.file.buffer) {
-      res.status(400).render('IPFSindex/store', { digest: 'No file uploaded' });
+      res.status(400).json({ success: false, message: 'No file uploaded' });
       return;
     }
 
     const { buffer, originalname, mimetype } = req.file;
-
     const { digest } = await storeModeratedFile(buffer, originalname, mimetype);
 
-    // 👇 Renders an HTML view with the digest as a link
-    res.status(201).render('IPFSindex/storedigest', { digest });
+    // ✅ Trả digest dưới dạng JSON
+    res.status(201).json({
+      success: true,
+      digest
+    });
   } catch (error) {
-    next(error);
+    console.error('❌ Error storing moderated file:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error storing file',
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 };

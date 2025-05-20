@@ -9,6 +9,6 @@ const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Route: POST /api/moderate
-router.post('/moderate-score', moderatescore);
+router.post('/moderate-score', upload.single('file'), moderatescore);
 router.get('/moderate-score', moderatescore);
 export default router;

@@ -7,8 +7,7 @@ import {encodeDNAHandler} from '../controllers/dnaencodeController';
 import {moderatescore} from '../controllers/HiveModerationController';
 import {storeModeratedFileHandler} from '../controllers/IPFSindexController';
 import {stakeTokens,getValidatorInfo,getAllValidators, distributeRewards} from '../controllers/tokenController';
-  
-
+import cors from 'cors';
 
 dotenv.config();
 
@@ -18,6 +17,12 @@ const port = process.env.PORT || 3000;
 // Setup view engine (EJS)
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
+
+// ✅ Mở CORS
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true
+}));
 
 // Middlewares
 app.use(express.json());
@@ -30,6 +35,10 @@ const upload = multer(); // memory storage
 // ---------------------------
 // 🚀 API Routes
 // ---------------------------
+
+app.get('/', (req, res) => {
+  res.json({ message: 'Backend is working!' });
+});
 
 // Encode DNA
 app.post('/encode-dna', upload.single('file'), encodeDNAHandler);
@@ -58,6 +67,7 @@ app.get('/get-all', getAllValidators);
 
 // Distribute rewards
 app.post('/get-rewards', distributeRewards);
+
 
 // ---------------------------
 // Global Error Handler
