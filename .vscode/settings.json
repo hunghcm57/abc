@@ -33,5 +33,6 @@
         "wukong",
         "wukongencode",
         "wukongencoder"
-    ]
+    ],
+    "git.ignoreLimitWarning": true
 }
