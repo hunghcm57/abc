@@ -161,7 +161,7 @@ const App: React.FC = () => {
       }
   
       // Upload to blockchain
-      const txResponse = await axios.post(`${API_BASE}/tokenRoutes', {
+      const txResponse = await axios.post(`${API_BASE}/tokenRoutes`, {
         fileCid,
         dnaCid,
         filename: file.name
