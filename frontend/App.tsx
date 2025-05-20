@@ -149,21 +149,22 @@ const App: React.FC = () => {
         dnaCid = fileCid;
       }
   
-      // Index both CIDs
-      console.log('Indexing CIDs...');
-      console.log('File CID:', fileCid);
-      console.log(file.name);
-      await axios.post(`${API_BASE}/digest-ipfs`, {
-        cid: fileCid,
-        metadata: { title: file.name, creator: 'AppUser', type: 'original', timestamp: Date.now() }
-      });
-      console.log('File CID indexed:', fileCid);
-      if (uploadMethod === 'dna') {
-        await axios.post(`${API_BASE}/digest-ipfs`, {
-          cid: dnaCid,
-          metadata: { title: `${file.name}.dna`, creator: 'AppUser', type: 'encoded', timestamp: Date.now() }
-        });
-      }
+      // // Index both CIDs
+      // console.log('Indexing CIDs...');
+      // console.log('File CID:', fileCid);
+      // console.log(file.name);
+      // await axios.post(`${API_BASE}/digest-ipfs`, {
+      //   cid: fileCid,
+      //   metadata: { title: file.name, creator: 'AppUser', type: 'original', timestamp: Date.now() }
+      // });
+      // console.log('File CID indexed:', fileCid);
+
+      // if (uploadMethod === 'dna') {
+      //   await axios.post(`${API_BASE}/digest-ipfs`, {
+      //     cid: dnaCid,
+      //     metadata: { title: `${file.name}.dna`, creator: 'AppUser', type: 'encoded', timestamp: Date.now() }
+      //   });
+      // }
   
       // Upload to blockchain
       const txResponse = await axios.post(`${API_BASE}/tokenRoutes`, {
