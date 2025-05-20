@@ -9,9 +9,8 @@ docker run -d --name ipfs-node -p 5001:5001 -p 8080:8080 -p 4001:4001 ipfs/go-ip
 
 # access database 
 docker exec -it mongodb mongosh
-use your_database_name     // tên DB bạn dùng trong code (ví dụ: ipfs_cids)
-show collections
-db.your_collection_name.find().pretty()
+use metadata     // tên DB bạn dùng trong code (ví dụ: ipfs_cids)
+db.files.find().pretty()
 
 # access file in ipfs
 http://localhost:8080/ipfs/QmX9rL7...xyz
