@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { ethers } from 'ethers';
 import dotenv from 'dotenv';
-import ScoinABI from '../abi/token.json';
+import ScoinABI from '../abi/token.json' with { type: "json" };
 import multer from 'multer';
 const upload = multer();
 dotenv.config();
@@ -22,7 +22,7 @@ export const stakeTokens = async (req: Request, res: Response): Promise<void> =>
   const { validator, amount } = req.body;
 
   if (!validator || !amount) {
-    res.status(400).render('token/stakeTokens', {
+    res.status(400).json({
       message: 'Validator address and amount are required.',
     });
     return;
@@ -31,7 +31,7 @@ export const stakeTokens = async (req: Request, res: Response): Promise<void> =>
   const tx = await scoin.stake(validator, ethers.utils.parseUnits(amount.toString(), 18));
   await tx.wait();
 
-  res.status(200).render('token/staketx', {
+  res.status(200).json({
     message: ` Staked! TxHash: ${tx.hash}`,
   });
   return;
@@ -42,7 +42,7 @@ export const unstakeTokens = async (req: Request, res: Response): Promise<void> 
   const { validator } = req.body;
 
   if (!validator) {
-    res.status(400).render('token/unstakeTokens', {
+    res.status(400).json({
       message: 'Validator address is required.',
     });
     return;
@@ -51,7 +51,7 @@ export const unstakeTokens = async (req: Request, res: Response): Promise<void> 
   const tx = await scoin.unstake(validator);
   await tx.wait();
 
-  res.status(200).render('token/unstaketx', {
+  res.status(200).json({
     message: ` Unstaked! TxHash: ${tx.hash}`,
   });
   return;
@@ -62,7 +62,7 @@ export const getValidatorInfo = async (req: Request, res: Response): Promise<voi
   const { address } = req.params;
   const info = await scoin.getValidatorInfo(address);
 
-  res.status(200).render('token/info', { info });
+  res.status(200).json('{ info }');
   return;
 };
 
@@ -70,7 +70,7 @@ export const getValidatorInfo = async (req: Request, res: Response): Promise<voi
 export const getAllValidators = async (_req: Request, res: Response): Promise<void> => {
   const validators = await scoin.getValidators();
 
-  res.status(200).render('token/validators', { validators });
+  res.status(200).json( { validators });
   return;
 };
 
@@ -79,7 +79,7 @@ export const distributeRewards = async (_req: Request, res: Response): Promise<v
   const tx = await scoin.distributeRewards();
   await tx.wait();
 
-  res.status(200).render('token/rewards', {
+  res.status(200).json( {
     message: `🎉 Rewards Distributed! TxHash: ${tx.hash}`,
   });
   return;
