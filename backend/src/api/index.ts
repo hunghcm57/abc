@@ -36,9 +36,6 @@ app.get('/', (_req: Request, res: Response) => {
 // Encode DNA
 app.post('/encode-dna', upload.single('file'), encodednaRoutes);
 
-// Moderate Score
-app.post('/moderate-score', upload.single('file'), scoreRoutes);
-
 // IPFS + Digest
 app.post('/digest-ipfs', upload.single('file'), digestipfsRoutes);
 

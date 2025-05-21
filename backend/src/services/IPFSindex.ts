@@ -2,7 +2,6 @@ import { create } from 'ipfs-http-client';
 import { Readable } from 'stream';
 import crypto from 'crypto';
 import { MongoClient } from 'mongodb';
-import { moderate } from './HiveModeration';
 
 const ipfs = create({ url: process.env.IPFS_API_URL || 'http://localhost:5001' });
 
@@ -33,8 +32,6 @@ export async function storeModeratedFile(
   const result = await ipfs.add({ path: fileName, content: fileStream });
   const cid = result.cid.toString();
 
-  // 3. Moderate the file
-  const { class: detectedClass, score } = await moderate(fileName); // Make sure `moderate()` can work with this
 
   // 4. Create metadata
   const metadata = {
@@ -43,8 +40,6 @@ export async function storeModeratedFile(
     fileType,
     fileSize,
     uploadTimestamp: new Date(),
-    class: detectedClass,
-    score,
   };
 
   // 5. Generate SHA256 digest
@@ -53,7 +48,6 @@ export async function storeModeratedFile(
     fileName,
     fileType,
     fileSize,
-    score,
   });
 
   const digest = crypto.createHash('sha256').update(raw).digest('hex');
