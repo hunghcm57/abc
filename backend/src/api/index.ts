@@ -8,7 +8,6 @@ import cors from 'cors';
 import encodednaRoutes from '../routes/dnaencodeRoutes';
 import digestipfsRoutes from '../routes/IPFSindexRoutes';
 import tokenRoutes from '../routes/tokenRoutes';
-import scoreRoutes from '../routes/HiveModerationRoutes';
 
 dotenv.config();
 const app = express();
@@ -22,7 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-const upload = multer({ storage: multer.memoryStorage() }); // Dùng buffer (không lưu file)
+const upload = multer(); // memory storage
 
 // ---------------------------
 // Routes
