@@ -1,7 +1,6 @@
 import express from 'express';
 import {
   stakeTokens,
-  unstakeTokens,
   getValidatorInfo,
   getAllValidators,
   distributeRewards
@@ -9,9 +8,12 @@ import {
 
 const router = express.Router();
 
-router.get('/stake-token', stakeTokens);
-router.get('/get-vali', getValidatorInfo);
-router.get('/get-all', getAllValidators);
-router.post('/get-rewards', distributeRewards);
+router.get('/staketoken', stakeTokens);
+router.post('/staketoken', stakeTokens);
+router.get('/getvali', getValidatorInfo);
+router.post('/getvali', getValidatorInfo);
+router.get('/getall', getAllValidators);
+router.post('/getall', getAllValidators);
+router.post('/getrewards', distributeRewards);
+export default router; //
 
-export default router;

@@ -1,4 +1,3 @@
-// src/components/DNAUploader.tsx
 import React, { useState } from 'react';
 import {
   Box,
@@ -14,26 +13,14 @@ import {
   Card,
   CardHeader,
   CardContent,
-  LinearProgress, Checkbox
+  LinearProgress,
+  Checkbox
 } from '@mui/material';
-
-import {  Wallet, ethers } from 'ethers';
-import DNAStorageABI from './abi/DNAStorage.json';
-import ScoinABI from './abi/Scoin.json';
+import { ethers } from 'ethers';
 import axios from 'axios';
 
-
-declare global {
-  interface ImportMeta {
-    env: {
-      VITE_API_BASE_URL: string;
-      // add other environment variables here
-    };
-  }
-}
-
 const App: React.FC = () => {
-  const [file, setFile] = useState<File | null>(null);
+  const [SelectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadMethod, setUploadMethod] = useState<'direct' | 'dna'>('direct');
   const [strandLength, setStrandLength] = useState(100);
   const [homopolymer, setHomopolymer] = useState(3);
@@ -42,179 +29,14 @@ const App: React.FC = () => {
   const [redundancy, setRedundancy] = useState(1);
   const [encodedDNA, setEncodedDNA] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [ipfsCid, setIpfsCid] = useState('');
-  const [transactionHash, setTransactionHash] = useState('');
-  const [scoinBalance, setScoinBalance] = useState('');
-  const [totalSupply, setTotalSupply] = useState('');
-  const [progress, setProgress] = useState(0);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadResult, setUploadResult] = useState({ipfsCid: '', transactionHash: '', scoinBalance: '', totalSupply: ''});
   const [showEncodedDNA, setShowEncodedDNA] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [digestIpfs, setDigestIpfs] = useState('');  // updated from boolean to string
 
-
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.length) {
-      setFile(e.target.files[0]);
-      setIsSubmitted(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file) return;
-    setIsUploading(true);
+  const API_BASE = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:3000';
   
-    try {
-      console.log('Starting upload process...');
-      console.log('API Base URL:', API_BASE);
-      console.log('File details:', {
-        name: file.name,
-        size: file.size,
-        type: file.type
-      });
-
-      // Test backend connection first
-      try {
-        console.log('Testing backend connection...');
-        console.log('API Base URL:', API_BASE);
-        const testResponse = await axios.get(API_BASE);
-        console.log('Backend connection test:', testResponse.data);
-      } catch (testError: any) {
-        console.error('Backend connection test failed:', testError.message);
-        throw new Error('Cannot connect to backend server. Please ensure the backend is running at ' + API_BASE);
-      }
-
-      // const modForm = new FormData();
-      // modForm.append('file', file);
-      // console.log('Sending moderation request...');
-      // const moderation = await axios.post(`${API_BASE}/moderate-score`, modForm, {
-      //   headers: { 'Content-Type': 'multipart/form-data' },
-      //   withCredentials: true,
-      //   timeout: 10000 // 10 second timeout
-      // });
-      // console.log('Moderation response:', moderation.data);
-      
-      // if (!moderation.data.isAllowed) {
-      //   alert('❌ File rejected by moderation.');
-      //   setIsUploading(false);
-      //   return;
-      // }
-  
-      let fileCid = '';
-      let dnaCid = '';
-  
-      // Upload original file to IPFS
-      console.log('Uploading to IPFS...');
-      const fileForm = new FormData();
-      fileForm.append('file', file);
-      const fileUpload = await axios.post(`${API_BASE}/digest-ipfs`, fileForm, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 30000 // 30 second timeout for file upload
-      });
-      console.log('IPFS upload response:', fileUpload.data);
-      fileCid = fileUpload.data.digest;
-  
-      // Optional: DNA encoding and upload to IPFS
-      if (uploadMethod === 'dna') {
-        const dnaForm = new FormData();
-        dnaForm.append('file', file);
-        dnaForm.append('strandLength', strandLength.toString());
-        dnaForm.append('homopolymer', homopolymer.toString());
-        dnaForm.append('gcContent', gcContent.toString());
-        dnaForm.append('redundancy', redundancy.toString());
-        dnaForm.append('errorCorrection', errorCorrection ? 'true' : 'false');
-  
-        const response = await axios.post(`${API_BASE}/encode-dna`, dnaForm);
-        const data = response.data;
-  
-        if (!data.encoded) {
-          alert('DNA encoding failed.');
-          setIsUploading(false);
-          return;
-        }
-  
-        setEncodedDNA(data.encoded);
-  
-        const dnaBlob = new Blob([data.encoded], { type: 'text/plain' });
-        const dnaFile = new File([dnaBlob], `${file.name}.dna.txt`, { type: 'text/plain' });
-        const dnaUploadForm = new FormData();
-        dnaUploadForm.append('file', dnaFile);
-        const dnaUpload = await axios.post(`${API_BASE}/digest-ipfs`, dnaUploadForm, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        dnaCid = dnaUpload.data.cid;
-      } else {
-        dnaCid = fileCid;
-      }
-  
-      // // Index both CIDs
-      // console.log('Indexing CIDs...');
-      // console.log('File CID:', fileCid);
-      // console.log(file.name);
-      // await axios.post(`${API_BASE}/digest-ipfs`, {
-      //   cid: fileCid,
-      //   metadata: { title: file.name, creator: 'AppUser', type: 'original', timestamp: Date.now() }
-      // });
-      // console.log('File CID indexed:', fileCid);
-
-      // if (uploadMethod === 'dna') {
-      //   await axios.post(`${API_BASE}/digest-ipfs`, {
-      //     cid: dnaCid,
-      //     metadata: { title: `${file.name}.dna`, creator: 'AppUser', type: 'encoded', timestamp: Date.now() }
-      //   });
-      // }
-  
-      // Upload to blockchain
-      const txResponse = await axios.post(`${API_BASE}/tokenRoutes`, {
-        fileCid,
-        dnaCid,
-        filename: file.name
-      });
-  
-      setUploadResult({
-        ipfsCid: fileCid,
-        transactionHash: txResponse.data.transactionHash,
-        scoinBalance: txResponse.data.scoinBalance,
-        totalSupply: txResponse.data.totalSupply
-      });
-  
-      setIsSubmitted(true);
-    } catch (err: any) {
-      console.error('Upload error details:', {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status,
-        headers: err.response?.headers,
-        config: {
-          url: err.config?.url,
-          method: err.config?.method,
-          headers: err.config?.headers
-        }
-      });
-      
-      let errorMessage = 'Upload failed: ';
-      if (err.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        errorMessage += `${err.response.status} - ${err.response.data?.message || err.message}`;
-      } else if (err.request) {
-        // The request was made but no response was received
-        errorMessage += `No response from server at ${API_BASE}. Please check if the backend is running.`;
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        errorMessage += err.message;
-      }
-      
-      alert(errorMessage);
-    } finally {
-      setIsUploading(false);
-    }
-  };  
-
   const resetForm = () => {
-    setFile(null);
+    setSelectedFile(null);
     setUploadMethod('direct');
     setStrandLength(100);
     setHomopolymer(3);
@@ -225,7 +47,64 @@ const App: React.FC = () => {
     setIsSubmitted(false);
     setIsUploading(false);
     setShowEncodedDNA(false);
-    setUploadResult({ ipfsCid: '', transactionHash: '', scoinBalance: '', totalSupply: '' });
+    setDigestIpfs('');
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.length) {
+      setSelectedFile(e.target.files[0]);
+      setIsSubmitted(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!SelectedFile) return;
+
+    setIsUploading(true);
+
+    try {
+
+
+      const ipfsFormData = new FormData();
+      ipfsFormData.append('file', SelectedFile);
+
+      const ipfsUploadResponse = await axios.post(`${API_BASE}/digest-ipfs`, ipfsFormData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const digest = ipfsUploadResponse.data.digest || '';
+      setDigestIpfs(digest);  // store digest into state
+
+      if (uploadMethod === 'dna') {
+        const dnaEncodingFormData = new FormData();
+        dnaEncodingFormData.append('file', SelectedFile);
+        dnaEncodingFormData.append('strandLength', strandLength.toString());
+        dnaEncodingFormData.append('homopolymer', homopolymer.toString());
+        dnaEncodingFormData.append('gcContent', gcContent.toString());
+        dnaEncodingFormData.append('redundancy', redundancy.toString());
+        dnaEncodingFormData.append('errorCorrection', errorCorrection ? 'true' : 'false');
+
+        const encodeResponse = await axios.post(`${API_BASE}/encode-dna`, dnaEncodingFormData);
+        const dnaResponse = encodeResponse.data;
+
+        if (!dnaResponse.encoded) {
+          alert('DNA encoding failed.');
+          setIsUploading(false);
+          return;
+        }
+
+        setEncodedDNA(dnaResponse.encoded);
+        setShowEncodedDNA(true);
+      }
+
+      setIsSubmitted(true);
+    } catch (err: any) {
+      console.error('Upload error:', err.message);
+      alert('Upload failed. Check console for details.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -236,14 +115,11 @@ const App: React.FC = () => {
       />
       <CardContent>
         {!isSubmitted ? (
-          // If NOT submitted, show the form
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* File Input */}
             <InputLabel htmlFor="file">File to Upload</InputLabel>
             <Input id="file" type="file" onChange={handleFileChange} fullWidth />
-            {isUploading && <LinearProgress variant="indeterminate" sx={{ my: 2 }} />}
-  
-            {/* Upload Method */}
+            {isUploading && <LinearProgress sx={{ my: 2 }} />}
+
             <InputLabel>Upload Method</InputLabel>
             <RadioGroup
               value={uploadMethod}
@@ -253,13 +129,10 @@ const App: React.FC = () => {
               <FormControlLabel value="direct" control={<Radio />} label="Direct Upload" />
               <FormControlLabel value="dna" control={<Radio />} label="DNA Encoding" />
             </RadioGroup>
-  
-            {/* DNA Parameters (if selected) */}
+
             {uploadMethod === 'dna' && (
-              <Box className="space-y-4">
-                <Typography variant="h6" gutterBottom>
-                  DNA Encoding Parameters
-                </Typography>
+              <Box>
+                <Typography variant="h6">DNA Encoding Parameters</Typography>
                 <TextField
                   label="Strand Length"
                   type="number"
@@ -318,13 +191,13 @@ const App: React.FC = () => {
                   }
                   label="Error Correction"
                 />
-            {encodedDNA && (
+                {encodedDNA && (
                   <>
                     <Button variant="outlined" fullWidth onClick={() => setShowEncodedDNA(!showEncodedDNA)}>
-                      {showEncodedDNA ? 'Hide Encoded DNA' : 'View Encoded DNA'}
+                      {showEncodedDNA ? 'Encoded DNA' : 'View Encoded DNA'}
                     </Button>
                     {showEncodedDNA && (
-                      <Box className="dna-strands" sx={{ mt: 2 }}>
+                      <Box sx={{ mt: 2 }}>
                         <Typography variant="h6">DNA STRANDS</Typography>
                         <Typography sx={{ whiteSpace: 'pre-wrap' }}>{encodedDNA}</Typography>
                       </Box>
@@ -334,32 +207,24 @@ const App: React.FC = () => {
               </Box>
             )}
 
-            {/* Submit & Reset Buttons */}
             <Box mt={2} display="flex" justifyContent="space-between">
               <Button variant="outlined" onClick={resetForm}>
                 Reset
               </Button>
-              <Button variant="contained" type="submit" disabled={!file || isUploading}>
+              <Button variant="contained" type="submit" disabled={!SelectedFile || isUploading}>
                 {isUploading ? 'Uploading...' : 'Upload File'}
               </Button>
             </Box>
           </form>
         ) : (
-          // If submitted, show results
-          <div className="space-y-4">
-            <Typography variant="h6" gutterBottom>
-              Upload Complete
+          <Box className="space-y-4">
+          <Typography variant="h6">Upload Complete</Typography>
+          {digestIpfs && (
+            <Typography variant="body2" sx={{ mt: 2 }}>
+              Digest: {digestIpfs}
             </Typography>
-            <Typography>IPFS CID: {uploadResult.ipfsCid}</Typography>
-            <Typography>Transaction Hash: {uploadResult.transactionHash}</Typography>
-            {uploadResult.scoinBalance && (
-              <Typography>Scoin Balance: {uploadResult.scoinBalance}</Typography>
-            )}
-            {uploadResult.totalSupply && (
-              <Typography>Total Scoin: {uploadResult.totalSupply}</Typography>
-            )}
-  
-            {/* Post-submission Actions */}
+          )}
+
             <Box mt={2} display="flex" gap={2}>
               <Button onClick={resetForm} variant="outlined" fullWidth>
                 Upload Another File
@@ -368,11 +233,11 @@ const App: React.FC = () => {
                 View Details
               </Button>
             </Box>
-          </div>
+          </Box>
         )}
       </CardContent>
     </Card>
   );
 };
 
-export default App;
+export default App ;

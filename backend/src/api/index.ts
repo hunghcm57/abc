@@ -1,85 +1,56 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import multer from 'multer';
 import dotenv from 'dotenv';
 import bodyParser from 'body-parser';
-import {encodeDNAHandler} from '../controllers/dnaencodeController';
-import {moderatescore} from '../controllers/HiveModerationController';
-import {storeModeratedFileHandler} from '../controllers/IPFSindexController';
-import {stakeTokens,getValidatorInfo,getAllValidators, distributeRewards} from '../controllers/tokenController';
 import cors from 'cors';
 
-dotenv.config();
+import encodednaRoutes from '../routes/dnaencodeRoutes';
+import digestipfsRoutes from '../routes/IPFSindexRoutes';
+import tokenRoutes from '../routes/tokenRoutes';
+import scoreRoutes from '../routes/HiveModerationRoutes';
 
+dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Setup view engine (EJS)
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'ejs');
+app.use(cors({ origin: 'http://localhost:5173' })); // Cho phép React frontend truy cập
 
-// ✅ Mở CORS
-app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true
-}));
-
-// Middlewares
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+
 app.use(express.static(path.join(__dirname, 'public')));
 
-const upload = multer(); // memory storage
+const upload = multer({ storage: multer.memoryStorage() }); // Dùng buffer (không lưu file)
 
 // ---------------------------
-// 🚀 API Routes
+// Routes
 // ---------------------------
 
-app.get('/', (req, res) => {
-  res.json({ message: 'Backend is working!' });
+// Route mặc định
+app.get('/', (_req: Request, res: Response) => {
+  res.status(200).json({ message: 'Welcome to Scoin backend API' });
 });
 
 // Encode DNA
-app.post('/encode-dna', upload.single('file'), encodeDNAHandler);
-app.get('/encode-dna', (_req, res) => {
-  res.render('dna/encode/form'); // form to upload a file for DNA encoding
-});
+app.post('/encode-dna', upload.single('file'), encodednaRoutes);
 
 // Moderate Score
-app.post('/moderate-score', upload.single('file'), moderatescore);
-app.get('/moderate-score', (_req, res) => {
-  res.render('moderation/score/form'); // form to upload file for moderation
-});
+app.post('/moderate-score', upload.single('file'), scoreRoutes);
 
-// Store file, moderate, and return digest
-app.post('/digest-ipfs', upload.single('file'), storeModeratedFileHandler);
-app.get('/digest-ipfs', (_req, res) => {
-  res.render('digest/form'); // upload + process form
-});
+// IPFS + Digest
+app.post('/digest-ipfs', upload.single('file'), digestipfsRoutes);
 
-// Stake token
-app.get('/stake-token', stakeTokens);
+// Token and validator routes
+app.use('/token', tokenRoutes); // Mount tất cả các token routes
 
-// Validator endpoints
-app.get('/get-vali/:address', getValidatorInfo);
-app.get('/get-all', getAllValidators);
-
-// Distribute rewards
-app.post('/get-rewards', distributeRewards);
-
-
-// ---------------------------
-// Global Error Handler
-// ---------------------------
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+//  Global error handler (trả JSON)
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   console.error('❌ Global error:', err);
-  res.status(500).render('error', { error: err.message || 'Internal Server Error' });
+  res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
 
-// ---------------------------
-// Start the server
-// ---------------------------
 app.listen(port, () => {
-  console.log(`🚀 Server running at http://localhost:${port}`);
+  console.log(`🚀 Server started at http://localhost:${port}`);
 });

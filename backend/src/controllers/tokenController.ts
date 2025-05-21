@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { ethers } from 'ethers';
 import dotenv from 'dotenv';
 import ScoinABI from '../abi/token.json';
-
+import multer from 'multer';
+const upload = multer();
 dotenv.config();
 
 const { ETH_RPC_URL, PRIVATE_KEY, SCOIN_ADDRESS } = process.env;
@@ -83,4 +84,3 @@ export const distributeRewards = async (_req: Request, res: Response): Promise<v
   });
   return;
 };
-

@@ -6,6 +6,11 @@ export const moderatescore = async (
   res: Response,
   next: NextFunction
 ): Promise<void> => {
-  const result = await moderate(req.file!.path);
-  res.render('HiveModeration/moderatescore ', { result });
+  if (!req.file) {
+    res.status(200).render('moderatescore/score', {});
+    return;
+  }
+
+  const  score  = await moderate(req.file.path);
+  res.status(200).send({ score: score });
 };
