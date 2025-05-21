@@ -1,26 +1,16 @@
-import { create } from 'ipfs-http-client';
-import { fetch } from 'undici';
-import type { Options } from 'ipfs-http-client';
-import { Readable } from 'stream';
-import crypto from 'crypto';
-import { MongoClient } from 'mongodb';
+import crypto from 'crypto'
+import { MongoClient } from 'mongodb'
 
-interface ExtendedOptions extends Options {
-  fetch?: typeof fetch;
-}
+// Thêm Helia và các tiện ích
+import { createHelia } from 'helia'
+import { unixfs } from '@helia/unixfs'
 
-const ipfs = create({
-  url: process.env.IPFS_API_URL || 'http://localhost:5001',
-  fetch: (url, options) => fetch(url, { ...options, duplex: 'half' })
-} as ExtendedOptions);
-
-
-const mongoClient = new MongoClient(process.env.MONGO_URI || 'mongodb://localhost:27017');
-const dbName = 'metadata';
-const collectionName = 'files';
+const mongoClient = new MongoClient(process.env.MONGO_URI || 'mongodb://localhost:27017')
+const dbName = 'metadata'
+const collectionName = 'files'
 
 interface StoreResult {
-  digest: string;
+  digest: string
 }
 
 export async function storeModeratedFile(
@@ -28,47 +18,41 @@ export async function storeModeratedFile(
   fileName: string,
   fileType: string
 ): Promise<StoreResult> {
-  // 1. Connect to MongoDB
+  // 1. Kết nối MongoDB nếu chưa có
   if (!mongoClient.connect()) {
     await mongoClient.connect();
   }
 
-  const db = mongoClient.db(dbName);
-  const collection = db.collection(collectionName);
 
-  // 2. Upload file to IPFS
-  console.log('Uploading to IPFS...');
-  const fileStream = Readable.from(buffer);
-  const fileSize = buffer.length;
-  const result = await ipfs.add({ path: fileName, content: fileStream });
-  const cid = result.cid.toString();
+  const db = mongoClient.db(dbName)
+  const collection = db.collection(collectionName)
 
-  // 4. Create metadata
+  // 2. Tạo IPFS client bằng Helia
+  const helia = await createHelia()
+  const fs = unixfs(helia)
+
+  // 3. Upload file
+  console.log('📤 Uploading to IPFS...')
+  const cid = await fs.addBytes(buffer)
+  const fileSize = buffer.length
+
+  // 4. Tạo metadata
   const metadata = {
-    cid,
+    cid: cid.toString(),
     fileName,
     fileType,
     fileSize,
-    uploadTimestamp: new Date(),
-  };
+    uploadTimestamp: new Date()
+  }
 
-  // 5. Generate SHA256 digest
-  const raw = JSON.stringify({
-    cid,
-    fileName,
-    fileType,
-    fileSize,
-    // score,
-  });
+  // 5. Sinh SHA256 digest từ metadata
+  const raw = JSON.stringify(metadata)
+  const digest = crypto.createHash('sha256').update(raw).digest('hex')
 
-  const digest = crypto.createHash('sha256').update(raw).digest('hex');
+  // 6. Lưu vào MongoDB
+  await collection.insertOne({ ...metadata, digest })
 
-  // 6. Insert metadata with digest into MongoDB
-  await collection.insertOne({ ...metadata, digest });
-
-  // ✅ 7. Return only digest
-  return { digest };
+  return { digest }
 }
 
-export default storeModeratedFile;
-
+export default storeModeratedFile
