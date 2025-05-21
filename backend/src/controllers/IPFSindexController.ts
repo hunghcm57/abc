@@ -16,7 +16,7 @@ export const storeModeratedFileHandler = async (
 
     const { digest } = await storeModeratedFile(buffer, originalname, mimetype);
 
-    // 👇 Renders an HTML view with the digest as a link
+    // Renders an HTML view with the digest as a link
     res.status(201).render('IPFSindex/storedigest', { digest });
   } catch (error) {
     next(error);

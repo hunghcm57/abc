@@ -1,9 +1,11 @@
 import path from 'path';
 import { spawn } from 'child_process';
+import multer from 'multer';
+
 import { Request, Response, NextFunction } from 'express';
 /**
  * Internal helper function: sends file buffer to Python script and returns DNA sequence.
- */
+ */const upload = multer();
 export const encodeDNA = async (buffer: Buffer): Promise<string> => {
   return new Promise((resolve, reject) => {
     const pythonScript = path.resolve(__dirname, '../../wukong.py');
@@ -51,7 +53,7 @@ export const encodeDNAHandler = async (req: Request, res: Response, next: NextFu
 
     const sequence = await encodeDNA(req.file.buffer);
      // Render EJS page with the DNA sequence
-    res.status(200).render('dnaencode/encodeDNA', { dnaseq: sequence });
+    res.status(200).json(sequence);
     } catch (error: any) {
       console.error('❌ DNA encoding failed:', error.message);
       next(error);
